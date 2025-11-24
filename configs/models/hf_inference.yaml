@@ -1,0 +1,7 @@
+model:
+  provider: hf_inference
+  name: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+  max_new_tokens: 512
+  temperature: 0.0
+  api_base: https://api-inference.huggingface.co/models
+  api_key_env: HUGGINGFACE_API_KEY
