@@ -9,7 +9,7 @@ class ModelConfig:
     name: str = field(default="gpt2")
     max_new_tokens: int = field(default=512)
     temperature: float = field(default=0.0)
-    api_base = Optional[str]
+    api_base: Optional[str] = None
     api_key_env: str = field(default="OPENAI_API_KEY")
     extra: Dict[str, Any] = field(default_factory=dict)
     

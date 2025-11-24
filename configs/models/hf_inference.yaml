@@ -1,7 +1,7 @@
 model:
   provider: hf_inference
-  name: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+  name: moonshotai/Kimi-K2-Instruct-0905
   max_new_tokens: 512
   temperature: 0.0
-  api_base: https://api-inference.huggingface.co/models
-  api_key_env: HUGGINGFACE_API_KEY
+  api_base: https://router.huggingface.co/v1
+  api_key_env: HF_TOKEN

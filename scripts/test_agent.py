@@ -10,7 +10,7 @@ from tripleagent.agents.example_tools import EchoTool
 
 ROOT = Path(__file__).resolve().parent.parent
 
-CONFIG_PATH = ROOT / "configs" / "models" / "hf_local.yaml"
+CONFIG_PATH = ROOT / "configs" / "models" / "openai.yaml"
 
 with CONFIG_PATH.open('r') as f:
     config_data = yaml.safe_load(f)

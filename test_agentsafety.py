@@ -1,8 +1,8 @@
-from datasets import load_dataset, logging
+# from datasets import load_dataset, logging
 
-logging.set_verbosity_debug()
+# logging.set_verbosity_debug()
 
-data = load_dataset("thu-coai/Agent-SafetyBench")
+# data = load_dataset("thu-coai/Agent-SafetyBench")
 
-rows = data[:5]
-print(rows)
+# rows = data[:5]
+# print(rows)

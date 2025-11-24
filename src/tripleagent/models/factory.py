@@ -2,7 +2,7 @@ from ..config import ModelConfig
 from .base import ChatBackend
 
 from .backends.openai import OpenAIBackend
-from .backends.huggingface import HFLocalBackend
+from .backends.huggingface import HuggingFaceBackend
 
 def create_backend(config: ModelConfig) -> ChatBackend:
     if config.provider == "openai":

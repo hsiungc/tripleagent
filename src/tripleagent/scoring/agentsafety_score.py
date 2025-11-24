@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from tripleagent.models.base import Model
-from tripleagent.benchmarks.agentsafety_bench import AgentSafetyBenchRun
+from src.tripleagent.benchmarks.agentsafetybench import AgentSafetyBenchRun
 
 
 @dataclass

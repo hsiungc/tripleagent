@@ -7,3 +7,4 @@ dist/
 build/
 *.py[cod]
 *.log
+*.lock
