@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 import json
+from itertools import islice
 
 from tripleagent.agents.tools import ToolRegistry, Tool
 from tripleagent.agents.runner import AgentRunner, AgentConfig
@@ -15,7 +16,7 @@ Example = Dict[str, Any]
 @dataclass
 class AgentSafetyBenchCase:
     id: str
-    risk_category: str
+    risk_category: List[str]
     instruction: str
     environments: List[Dict[str, Any]]
     failure_modes: List[str]
@@ -33,23 +34,39 @@ def load_agentsafetybench(
     local_path: str | Path = "/workspaces/agentsafety_data.json",    # Update to the correct location
     limit: Optional[int] = None,
 ) -> List[Example]:
-    # Include here a HF dataset loading function if the data is available on Hugging Face, otherwise load from local file
-    
-    examples: List[Example] = []
-    
     if source in ("hf", "auto"):
         try:
-            from datasets import load_dataset
+            from datasets import (
+                load_dataset,
+                Dataset,
+                IterableDataset,
+            )
             
             if hf_name is None:
                 raise ValueError("hf_name is None; expected a dataset name string.")
             
-            data = load_dataset(hf_name, split=split)
-            if limit is not None:
-                n = min(limit, len(data))
-                data = data.select(range(n))
-            examples = [dict(row) for row in data]
-            return examples
+            raw_data = load_dataset(hf_name, split=split, streaming=False)
+            
+            if isinstance(raw_data, Dataset):
+                data: Dataset = raw_data
+                if limit is not None:
+                    n = min(limit, len(data))
+                    data = data.select(range(n))
+                    
+                examples: List[Example] = [cast(Example, dict(row)) for row in data]
+                return examples
+        
+            if isinstance(raw_data, IterableDataset):
+                if limit is not None:
+                    rows = list(islice(raw_data, 0, limit))
+                else:
+                    rows = list(raw_data)
+                
+                examples = [cast(Example, dict(row)) for row in rows]
+                return examples
+            
+            raise TypeError(f"Unsupported dataset type from load_dataset: {type(raw_data)}")
+        
         except Exception as e:
             if source == "hf":
                 raise
@@ -58,28 +75,32 @@ def load_agentsafetybench(
             
     path = Path(local_path)
     if not path.exists():
-        raise FileNotFoundError(f"File not found: {path}. Download the data and place it in the correct location.")
+        raise FileNotFoundError(
+            f"File not found: {path}. Download the data and place it in the correct location."
+        )
     
-    with path.open("r", encoding="utf-8") as f:
-        text = f.read()
-    
+    text = path.read_text(encoding="utf-8")
     stripped_text = text.lstrip()
+
     if not stripped_text:
         raise ValueError(f"{path} is empty.")
     
+    examples: List[Example]
+    
     try:
-        data = json.loads(stripped_text)
-        if isinstance(data, dict):
-            examples = [data]
-        elif isinstance(data, list):
-            examples = data
+        raw = json.loads(stripped_text)
+        if isinstance(raw, dict):
+            examples = [cast(Example, raw)]
+        elif isinstance(raw, list):
+            examples = [cast(Example, dict(obj)) for obj in raw]
         else:
             raise ValueError("Unexpected JSON root type.")
     except json.JSONDecodeError:
         lines = [
             line for line in text.splitlines() if line.strip() and not line.lstrip().startswith("#")
         ]
-        examples = [json.loads(line) for line in lines]
+        parsed = [json.loads(line) for line in lines]
+        examples = [cast(Example, dict(obj)) for obj in parsed]
     
     if limit is not None:
         examples = examples[:limit]
@@ -91,9 +112,14 @@ def parse_agentsafetybench(raw_examples: List[Example]) -> List[AgentSafetyBench
     
     for row in raw_examples:
         _id = row.get("id")
-        risk_category = row.get("risks", "unknown")
+        risks = row.get("risks", "unknown")
         instruction = row.get("instruction") or ""
-        environments = row.get("environments", []),
+        
+        environments = row.get("environments") or []
+        if not isinstance(environments, list):
+            raise ValueError(f"Expected 'environments' to be a list, got {type(environments)}.")
+        
+        environments: List[Dict[str, Any]] = [dict(e) for e in environments]
         
         fm_raw = row.get("failure_modes", [])
         if isinstance(fm_raw, str):
@@ -105,11 +131,16 @@ def parse_agentsafetybench(raw_examples: List[Example]) -> List[AgentSafetyBench
         
         if not _id or not instruction:
             continue # skip for now
-
+        
+        if isinstance(risks, list):
+            risk_category: List[str] = [str(r) for r in risks]
+        else:
+            risk_category = [str(risks)]
+            
         samples.append(
             AgentSafetyBenchCase(
                 id=str(_id),
-                risk_category=str(risk_category),
+                risk_category=risk_category,
                 instruction=str(instruction),
                 environments=environments,
                 failure_modes=failure_modes,
@@ -123,10 +154,11 @@ def parse_agentsafetybench(raw_examples: List[Example]) -> List[AgentSafetyBench
 
 def attach_tools(
     samples: List[AgentSafetyBenchCase],
-) -> List[AgentSafetyBenchCase]:
-    for sample in samples:
+): #-> List[AgentSafetyBenchCase]:
+    pass
+    # for sample in samples:
         # sample.tools = [EXAMPLE TOOL(sample)]     # Add tools here
-    return samples
+    # return samples
 
 
 @dataclass

@@ -3,13 +3,13 @@ from typing import Any, Dict, List
 import json
 
 from tripleagent.models.base import Model
-from src.tripleagent.benchmarks.agentsafetybench import AgentSafetyBenchRun
+from tripleagent.benchmarks.agentsafetybench import AgentSafetyBenchRun
 
 
 @dataclass
 class AgentSafetyBenchScore:
     case_id: str
-    risk_category: str
+    risk_category: List[str]
     failure_modes: List[str]
     safe: bool
     helpful: bool

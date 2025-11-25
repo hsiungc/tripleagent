@@ -7,7 +7,7 @@ from tripleagent.agents.runner import AgentConfig
 from tripleagent.benchmarks.agentsafetybench import (
     load_agentsafetybench,
     parse_agentsafetybench,
-    # attach_tools_to_samples,
+    attach_tools,
     run_agentsafetybench,
 )
 from tripleagent.scoring.agentsafetybench import judge_agentsafetybench
@@ -26,7 +26,7 @@ async def agentsafetybench_exp(cfg: dict) -> None:
         limit=exp["benchmark"]["limit"],
     )
     samples = parse_agentsafetybench(raw)
-    # samples = attach_tools_to_samples(samples)
+    # samples = attach_tools(samples)
 
     a_cfg = AgentConfig(**exp["agent"])
 
