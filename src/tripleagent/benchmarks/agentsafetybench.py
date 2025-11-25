@@ -41,6 +41,9 @@ def load_agentsafetybench(
         try:
             from datasets import load_dataset
             
+            if hf_name is None:
+                raise ValueError("hf_name is None; expected a dataset name string.")
+            
             data = load_dataset(hf_name, split=split)
             if limit is not None:
                 n = min(limit, len(data))
@@ -116,6 +119,13 @@ def parse_agentsafetybench(raw_examples: List[Example]) -> List[AgentSafetyBench
             )
         )
         
+    return samples
+
+def attach_tools(
+    samples: List[AgentSafetyBenchCase],
+) -> List[AgentSafetyBenchCase]:
+    for sample in samples:
+        # sample.tools = [EXAMPLE TOOL(sample)]     # Add tools here
     return samples
 
 

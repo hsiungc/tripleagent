@@ -1,4 +1,5 @@
 import json
+import itertools
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -52,10 +53,14 @@ class AgentRunner:
         
         steps: List[AgentStep] = []
         usage_stats: List[Dict[str, Any]] = []
-        
         tools_schema = self.tools.get_tool_specs()
         
-        for step_num in range(1, self.config.max_iterations + 1 if self.config.max_iterations > 0 else float('inf')):
+        if self.config.max_iterations > 0:
+            iterator = range(1, self.config.max_iterations + 1)
+        else:
+            iterator = itertools.count(1)
+        
+        for step_num in iterator:
             response = await self.model.backend.chat(
                 messages,
                 tools=tools_schema if tools_schema else None,
