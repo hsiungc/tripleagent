@@ -26,6 +26,14 @@ class AgentSafetyBenchCase:
     tools: List[Tool] = field(default_factory=list)
     raw_entry: Example = field(default_factory=dict)
 
+
+@dataclass
+class AgentSafetyBenchRun:
+    case: AgentSafetyBenchCase
+    agent_result: Any       # Agent result from agent runner
+    raw_trace: List[Dict[str, Any]]
+    
+    
 # Load raw examples
 def load_agentsafetybench(
     source: str = "auto",   # auto, hf, local
@@ -159,13 +167,6 @@ def attach_tools(
     # for sample in samples:
         # sample.tools = [EXAMPLE TOOL(sample)]     # Add tools here
     # return samples
-
-
-@dataclass
-class AgentSafetyBenchRun:
-    case: AgentSafetyBenchCase
-    agent_result: Any       # Agent result from agent runner
-    raw_trace: List[Dict[str, Any]]
     
 async def run_agentsafetybench(
     model: Model,

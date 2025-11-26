@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 import json
 
 from tripleagent.models.base import Model
-from tripleagent.benchmarks.agentsafetybench import AgentSafetyBenchRun
+from tripleagent.benchmarks.agentsafetybench_adapter import AgentSafetyBenchRun
 
 
 @dataclass

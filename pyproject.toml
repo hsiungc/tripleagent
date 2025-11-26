@@ -13,6 +13,8 @@ dependencies = [
     "openai>=0.27.0",
     "transformers>=4.30.0",
     "datasets>=2.13.0",
+    "huggingface_hub>=0.32.0",
+    "inspect_ai>=0.3.25",
 ]
 
 [project.optional-dependencies]

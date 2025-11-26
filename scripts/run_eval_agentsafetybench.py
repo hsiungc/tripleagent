@@ -4,7 +4,7 @@ import yaml
 
 from tripleagent.models.base import Model
 from tripleagent.agents.runner import AgentConfig
-from tripleagent.benchmarks.agentsafetybench import (
+from tripleagent.benchmarks.agentsafetybench_adapter import (
     load_agentsafetybench,
     parse_agentsafetybench,
     attach_tools,
