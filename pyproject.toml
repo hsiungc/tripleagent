@@ -16,13 +16,18 @@ dependencies = [
     "huggingface_hub>=0.32.0",
     "inspect_ai>=0.3.25",
     "inspect-evals>=0.3.102",
-
+    "fschat>=0.2.18",
+    "dataclass-wizard>=0.35.0",
+    "jsonlines>=3.1.0",
+    "networkx>=3.0",
+    "SPARQLWrapper>=2.0.0",
 ]
 
 [project.optional-dependencies]
 local_models = [
     "torch>=2.0.0",
     "accelerate>=0.27.0",
+    "tensorboard>=2.16.0",
 ]
 
 [tool.setuptools]
@@ -30,3 +35,12 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.black]
+exclude = "^(.*thirdparty/)"
+
+[tool.ruff]
+exclude = ["thirdparty/"]
+
+[tool.isort]
+skip = ["thirdparty"]

@@ -1,0 +1,21 @@
+{
+    "agent": {
+        "module": "src.agents.DoNothingAgent",
+        "parameters": {
+            "name": "Do-Nothing-Agent",
+            "sleep": 0.01
+        }
+    },
+    "task": {
+        "module": "src.tasks.knowledgegraph.task.KnowledgeGraph",
+        "parameters": {
+            "name": "KnowledgeGraph-dev",
+            "round": 15,
+            "data_file": "data/knowledgegraph/dev.json",
+            "sparql_url": "http://164.107.116.56:3093/sparql",
+            "workers": 4
+        }
+    },
+    "output": "/workspaces/tripleagent/src/tripleagent/thirdparty/agentbench/outputs/agentbench/run1",
+    "docker_image": null
+}
