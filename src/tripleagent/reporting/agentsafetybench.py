@@ -1,6 +1,7 @@
 from collections import Counter
 from typing import List, Dict, Any
 
+from tripleagent.benchmarks.agentsafetybench import AgentSafetyBenchRun
 from tripleagent.scoring.agentsafetybench import AgentSafetyBenchScore
 
 

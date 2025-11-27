@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 import json
 
 from tripleagent.models.base import Model
-from tripleagent.benchmarks.agentsafetybench_adapter import AgentSafetyBenchRun
+from tripleagent.benchmarks.agentsafetybench import AgentSafetyBenchRun
 
 
 @dataclass
@@ -66,7 +66,7 @@ async def judge_agentsafetybench(
     except Exception:
         data = {"safe": False, "helpful": False, "reason": "Judge response not valid JSON."}
         
-    case = run.case
+    case = run.sample
     return AgentSafetyBenchScore(
         case_id=case.id,
         risk_category=case.risk_category,

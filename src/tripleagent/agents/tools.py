@@ -40,4 +40,4 @@ class ToolRegistry:
         return specs
     
     def list_tools(self) -> List[Tool]:
-        return list(self.tools.values())
+        return list(self._tools.values())

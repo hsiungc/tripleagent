@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 import json
 
-from tripleagent.benchmarks.agentharm_adapter import AgentHarmRun
+from tripleagent.benchmarks.agentharm import AgentHarmRun
 from tripleagent.models.base import Model
 
 
@@ -17,7 +17,7 @@ class AgentHarmScore:
     reason: str
 
 
-async def judge_agentharm_run(
+async def judge_agentharm(
     judge_model: Model,
     run: AgentHarmRun,
 ) -> AgentHarmScore:
