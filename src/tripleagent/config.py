@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 import yaml
 
 
@@ -12,13 +13,13 @@ class ModelConfig:
     api_base: Optional[str] = None
     api_key_env: str = field(default="OPENAI_API_KEY")
     extra: Dict[str, Any] = field(default_factory=dict)
-    
+
     @staticmethod
     def from_dict(config_dict: Dict[str, Any]) -> "ModelConfig":
         return ModelConfig(**config_dict)
-    
+
     @staticmethod
     def from_yaml(yaml_path: str) -> "ModelConfig":
-        with open(yaml_path, 'r') as file:
+        with open(yaml_path, "r") as file:
             config_dict = yaml.safe_load(file)
         return ModelConfig.from_dict(config_dict["model"])

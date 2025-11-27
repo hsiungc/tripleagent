@@ -1,13 +1,13 @@
 import asyncio
 from pathlib import Path
 
-from tripleagent.models.base import Model
 from tripleagent.agents.runner import AgentConfig
 from tripleagent.benchmarks.agentharm import (
     load_agentharm,
     parse_agentharm,
     run_agentharm,
 )
+from tripleagent.models.base import Model
 
 
 async def main():

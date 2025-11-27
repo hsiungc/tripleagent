@@ -1,9 +1,9 @@
 # scripts/test_agent_no_tools.py
 import asyncio
 
-from tripleagent.models.base import Model
-from tripleagent.agents.runner import AgentRunner, AgentConfig
+from tripleagent.agents.runner import AgentConfig, AgentRunner
 from tripleagent.agents.tools import ToolRegistry
+from tripleagent.models.base import Model
 
 
 async def main():
@@ -25,7 +25,9 @@ async def main():
         config=config,
     )
 
-    result = await runner.run("Give a one-sentence explanation of what this project does.")
+    result = await runner.run(
+        "Give a one-sentence explanation of what this project does."
+    )
     print("Final assistant message:\n", result.final_message)
 
 

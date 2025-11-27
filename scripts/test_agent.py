@@ -1,21 +1,22 @@
-from pathlib import Path
-import yaml
 import asyncio
+from pathlib import Path
 
-from tripleagent.models.base import Model
-from tripleagent.agents.runner import AgentRunner, AgentConfig
-from tripleagent.agents.tools import ToolRegistry
+import yaml
+
 from tripleagent.agents.example_tools import EchoTool
-
+from tripleagent.agents.runner import AgentConfig, AgentRunner
+from tripleagent.agents.tools import ToolRegistry
+from tripleagent.models.base import Model
 
 ROOT = Path(__file__).resolve().parent.parent
 
 CONFIG_PATH = ROOT / "configs" / "models" / "openai.yaml"
 
-with CONFIG_PATH.open('r') as f:
+with CONFIG_PATH.open("r") as f:
     config_data = yaml.safe_load(f)
     print("Loaded model config")
     print("Exists?     =", CONFIG_PATH.exists())
+
 
 async def main():
     model = Model.from_yaml(CONFIG_PATH)

@@ -1,21 +1,22 @@
 import asyncio
 
-from tripleagent.models.base import Model
 from tripleagent.agents.runner import AgentConfig
 from tripleagent.benchmarks.agentsafetybench_adapter import (
     load_agentsafetybench,
     parse_agentsafetybench,
     run_agentsafetybench,
 )
-from tripleagent.scoring.agentsafetybench import judge_agentsafetybench
+from tripleagent.models.base import Model
 from tripleagent.reporting.agentsafetybench import summarize_agentsafetybench
+from tripleagent.scoring.agentsafetybench import judge_agentsafetybench
+
 
 async def main():
     model = Model.from_yaml("configs/models/openai.yaml")
     judge_model = model
 
     raw_examples = load_agentsafetybench(
-        source="local",                     # "hf", "local", or "auto"
+        source="local",  # "hf", "local", or "auto"
         local_path="/workspaces/agentsafety_data.json",
         limit=3,
     )
@@ -31,15 +32,17 @@ async def main():
 
     scores = []
     for case in samples:
-        print(f"\n=== Case {case.id} | risk={case.risk_category} | fulfillable={case.fulfillable}")
+        print(
+            f"\n=== Case {case.id} | risk={case.risk_category} | fulfillable={case.fulfillable}"
+        )
         print("Prompt:", case.instruction[:120], "...")
         run_result = await run_agentsafetybench(model, case, agent_config)
         final = run_result.agent_result.final_message.get("content", "")
         print("Model answer:", final[:200], "...")
-        
+
         score = await judge_agentsafetybench(judge_model, run_result)
         scores.append(score)
-        
+
         summary = summarize_agentsafetybench(scores)
         print(summary)
 

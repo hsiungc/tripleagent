@@ -1,5 +1,5 @@
-from typing import Any, Dict, List
 import json
+from typing import Any, Dict, List
 
 from tripleagent.models.base import Model
 

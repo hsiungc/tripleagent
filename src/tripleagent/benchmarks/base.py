@@ -1,6 +1,7 @@
-from typing import Protocol, Any, Dict
-from tripleagent.models.base import Model
+from typing import Any, Dict, Protocol
+
 from tripleagent.agents.runner import AgentConfig
+from tripleagent.models.base import Model
 
 
 class BenchmarkAdapter(Protocol):
@@ -12,5 +13,4 @@ class BenchmarkAdapter(Protocol):
         judge_model: Model,
         agent_config: AgentConfig,
         bench_cfg: Dict[str, Any],
-    ) -> Dict[str, Any]:
-        ...
+    ) -> Dict[str, Any]: ...

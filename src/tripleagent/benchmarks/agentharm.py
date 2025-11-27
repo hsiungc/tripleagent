@@ -1,13 +1,13 @@
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Literal
 import json
 import shutil
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Dict, List, Literal, Optional
 
 from huggingface_hub import snapshot_download
 
-from tripleagent.agents.runner import AgentRunner, AgentConfig
-from tripleagent.agents.tools import ToolRegistry, Tool
+from tripleagent.agents.runner import AgentConfig, AgentRunner
+from tripleagent.agents.tools import Tool, ToolRegistry
 from tripleagent.models.base import Model
 
 from .utils import load_local_json
@@ -22,15 +22,15 @@ class AgentHarmSample:
     prompt: str
     category: str
     split: str
-    
+
     label: Optional[str] = None
-    
+
     tools: List[Tool] = field(default_factory=list)
     raw_entry: Example = field(default_factory=dict)
 
 
 def load_agentharm(
-    source: str = "auto",    # "auto" | "hf" | "local"
+    source: str = "auto",  # "auto" | "hf" | "local"
     hf_name: str = "ai-safety-institute/AgentHarm",
     split: Literal["val", "test_public", "test_private"] = "test_public",
     local_path: str | Path = "/workspaces/agentharm_behaviors.json",
@@ -76,7 +76,9 @@ def load_agentharm(
 
             input_json_file = cache_dir / split_dict[name][split]
             if not input_json_file.exists():
-                raise FileNotFoundError(f"[AgentHarm] File not found: {input_json_file}")
+                raise FileNotFoundError(
+                    f"[AgentHarm] File not found: {input_json_file}"
+                )
 
             with input_json_file.open("r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -112,10 +114,10 @@ def parse_agentharm(raw_examples: List[Example]) -> List[AgentHarmSample]:
         category = row.get("category")
         split = row.get("split")
         label = row.get("label")
-        
+
         if not _id or not prompt:
             continue
-        
+
         samples.append(
             AgentHarmSample(
                 id=str(_id),
@@ -128,48 +130,42 @@ def parse_agentharm(raw_examples: List[Example]) -> List[AgentHarmSample]:
                 raw_entry=row,
             )
         )
-        
+
     return samples
 
 
 def attach_tools_agentharm(
     samples: List[AgentHarmSample],
-) -> List[AgentHarmSample]:    
+) -> List[AgentHarmSample]:
     for sample in samples:
-        sample.tools = []     # Add tools here
-        
+        sample.tools = []  # Add tools here
+
     return samples
-    
-    
+
+
 @dataclass
 class AgentHarmRun:
     sample: AgentHarmSample
     agent_result: Any
     raw_trace: List[Dict[str, Any]]
-    
+
 
 async def run_agentharm(
-    sample: AgentHarmSample, 
-    model: Model, 
-    agent_config: AgentConfig
+    sample: AgentHarmSample, model: Model, agent_config: AgentConfig
 ) -> AgentHarmRun:
     tools = ToolRegistry(sample.tools)
     runner = AgentRunner(model=model, config=agent_config, tools=tools)
     user_prompt = sample.prompt
     result = await runner.run(user_prompt)
-    
+
     raw_trace: List[Dict[str, Any]] = []
     for step in result.steps:
         raw_trace.append(step.assistant_message)
         raw_trace.extend(step.tool_results)
     raw_trace.append(result.final_message)
-    
-    return AgentHarmRun(
-        sample=sample, 
-        agent_result=result, 
-        raw_trace=raw_trace
-    )
-    
+
+    return AgentHarmRun(sample=sample, agent_result=result, raw_trace=raw_trace)
+
 
 # def load_agentharm_behaviors(
 #     name: Literal["harmful", "benign", "chat"] = "harmful",
@@ -244,14 +240,10 @@ def filter_behaviors(
 
     if detailed_behaviors is not None:
         filtered = [
-            b for b in filtered
-            if b.get("detailed_prompt") == detailed_behaviors
+            b for b in filtered if b.get("detailed_prompt") == detailed_behaviors
         ]
 
     if hint_included is not None:
-        filtered = [
-            b for b in filtered
-            if b.get("hint_included") == hint_included
-        ]
+        filtered = [b for b in filtered if b.get("hint_included") == hint_included]
 
     return filtered

@@ -1,6 +1,6 @@
+import json
 from dataclasses import dataclass
 from typing import Any, Dict, List
-import json
 
 from tripleagent.benchmarks.agentharm import AgentHarmRun
 from tripleagent.models.base import Model

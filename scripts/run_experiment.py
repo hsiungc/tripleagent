@@ -1,11 +1,11 @@
 import asyncio
 import sys
+
 import yaml
 
-from tripleagent.models.base import Model
 from tripleagent.agents.runner import AgentConfig
-
-from tripleagent.benchmarks import agentsafetybench, agentharm
+from tripleagent.benchmarks import agentharm, agentsafetybench
+from tripleagent.models.base import Model
 
 BENCHMARKS = {
     "agentsafety": agentsafetybench,
