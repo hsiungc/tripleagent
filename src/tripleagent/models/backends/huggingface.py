@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional
 import httpx
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
-from ...config import ModelConfig
+from ..config import ModelConfig
 from ..base import ChatBackend, Message, ToolSpec
 
 
@@ -29,7 +29,7 @@ class HuggingFaceBackend(ChatBackend):
                     f"HuggingFace Inference API key not found in environment variable {self.config.api_key_env}."
                 )
 
-            base = self.config.api_base.rstrip("/")
+            base = (self.config.api_base or "").rstrip("/")
             model_name = self.config.name
             self._endpoint = f"{base}/{model_name}"
 
@@ -41,7 +41,7 @@ class HuggingFaceBackend(ChatBackend):
         else:
             # Local model setup
             model_name = self.config.name
-            extra = Dict[str, Any] = self.config.extra or {}
+            extra: Dict[str, Any] = self.config.extra or {}
 
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
             self.model = AutoModelForCausalLM.from_pretrained(model_name)
@@ -78,7 +78,7 @@ class HuggingFaceBackend(ChatBackend):
         prompt = self._messages_to_prompt(messages)
 
         if self._use_inference:
-            # HR Inference API call
+            # HF Inference API call
             payload = {
                 "inputs": prompt,
                 "parameters": {
@@ -119,12 +119,13 @@ class HuggingFaceBackend(ChatBackend):
             outputs = self._pipeline(prompt, **gen_kwargs)
             text = outputs[0].get("generated_text", "") if outputs else ""
 
-            normalized_message: Message = {
-                "role": "assistant",
-                "content": text,
-            }
+        # Normalize return shape for both paths
+        normalized_message: Message = {
+            "role": "assistant",
+            "content": text,
+        }
 
-            return {
-                "message": normalized_message,
-                "usage": None,
-            }
+        return {
+            "response": normalized_message,
+            "usage": None,
+        }

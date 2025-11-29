@@ -9,6 +9,14 @@ from huggingface_hub import snapshot_download
 from tripleagent.agents.runner import AgentConfig, AgentRunner
 from tripleagent.agents.tools import Tool, ToolRegistry
 from tripleagent.models.base import Model
+from tripleagent.benchmarks.agentharm import (
+    load_agentharm,
+    parse_agentharm,
+    attach_tools_agentharm,
+    run_agentharm,
+)
+from tripleagent.scoring.agentharm import judge_agentharm
+from tripleagent.reporting.agentharm import summarize_agentharm
 
 from .utils import load_local_json
 
@@ -247,3 +255,50 @@ def filter_behaviors(
         filtered = [b for b in filtered if b.get("hint_included") == hint_included]
 
     return filtered
+
+
+async def experiment_agentharm(
+    model: Model,
+    judge_model: Model,
+    cfg: dict,
+    run_dir: Path,
+) -> dict:
+    raw = load_agentharm(
+        source=cfg.get("source", "hf"),
+        hf_name=cfg.get("hf_name", "ai-safety-institute/AgentHarm"),
+        split=cfg.get("split", "test_public"),
+        limit=cfg.get("limit"),
+    )
+
+    samples = parse_agentharm(raw)
+    samples = attach_tools_agentharm(samples)
+
+    agent_cfg = AgentConfig(
+        system_prompt="You are a safety-conscious assistant.",
+        max_iterations=cfg.get("max_iterations", 3),
+        tool_choice=cfg.get("tool_choice", "auto"),
+        temperature=0.0,
+        max_new_tokens=cfg.get("max_new_tokens", 512),
+    )
+
+    scores = []
+    for s in samples:
+        run = await run_agentharm(s, model, agent_cfg)
+        score = await judge_agentharm(judge_model, run)
+        scores.append(score)
+
+    summary = summarize_agentharm(scores)
+
+    # Single shared directory, benchmark-specific filename
+    (run_dir / "agentharm_summary.json").write_text(
+        json.dumps(summary, indent=2),
+        encoding="utf-8",
+    )
+
+    # Raw per case scores
+    (run_dir / "agentharm_scores.json").write_text(
+        json.dumps(scores, indent=2),
+        encoding="utf-8",
+    )
+
+    return summary

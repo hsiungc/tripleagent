@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from openai import AsyncOpenAI
 
-from ...config import ModelConfig
+from ..config import ModelConfig
 from ..base import ChatBackend, Message, ToolSpec
 
 

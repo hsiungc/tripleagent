@@ -76,6 +76,7 @@ class AgentRunner:
                 usage_stats.append(usage)
 
             tool_calls = assistant_message.get("tool_calls", [])
+            print(f"[AgentRunner] Tool calls at step {step_num}: {tool_calls}")
 
             if not tool_calls:
                 messages.append(assistant_message)

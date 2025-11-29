@@ -9,4 +9,4 @@ License: Apache-2.0
 Only minimal pruning was done. All local modifications (if any) are documented below.
 
 ## Local modifications
-- None yet.
+- Refactored `eval.py` to run in TripleAgent pipeline.

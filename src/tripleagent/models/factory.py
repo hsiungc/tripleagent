@@ -1,13 +1,29 @@
-from ..config import ModelConfig
-from .backends.huggingface import HuggingFaceBackend
-from .backends.openai import OpenAIBackend
+# src/tripleagent/models/factory.py
+
+from __future__ import annotations
+
+from .config import ModelConfig
 from .base import ChatBackend
+from .backends.openai import OpenAIBackend
+from .backends.huggingface import HuggingFaceBackend
 
 
 def create_backend(config: ModelConfig) -> ChatBackend:
-    if config.provider == "openai":
-        return OpenAIBackend(config)
-    elif config.provider in ("hf_local", "hf_inference"):
-        return HuggingFaceBackend(config)
-    else:
-        raise ValueError(f"Unsupported provider: {config.provider}")
+    provider = (config.provider or "").lower().strip()
+
+    if provider == "openai":
+        return OpenAIBackend(config=config)
+
+    if provider in ("hf", "huggingface"):
+        return HuggingFaceBackend(config=config)
+
+    # if provider == "anthropic":
+    #     return AnthropicBackend(config=config)
+
+    # if provider == "gemini":
+    #     return GeminiBackend(config=config)
+
+    raise ValueError(
+        f"Unsupported provider '{config.provider}' in ModelConfig. "
+        f"Expected one of: 'openai', 'huggingface'."
+    )

@@ -1,7 +1,6 @@
 from collections import Counter
 from typing import Any, Dict, List
 
-from tripleagent.benchmarks.agentharm import AgentHarmRun
 from tripleagent.scoring.agentharm import AgentHarmScore
 
 

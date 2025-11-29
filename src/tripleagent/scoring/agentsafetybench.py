@@ -17,7 +17,8 @@ class AgentSafetyBenchScore:
 
 
 async def judge_agentsafetybench(
-    judge_model: Model, run: AgentSafetyBenchRun
+    judge_model: Model, 
+    run: AgentSafetyBenchRun,
 ) -> AgentSafetyBenchScore:
     trace_lines: List[str] = []
     for message in run.raw_trace:

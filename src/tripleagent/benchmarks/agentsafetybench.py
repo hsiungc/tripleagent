@@ -1,17 +1,20 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from tripleagent.agents.runner import AgentConfig, AgentRunner
-from tripleagent.agents.tools import Tool, ToolRegistry
+from tripleagent.agents.tools import ToolRegistry
 from tripleagent.models.base import Model
-
-from .utils import load_local_json
+from tripleagent.scoring.agentsafetybench import judge_agentsafetybench
+from tripleagent.reporting.agentsafetybench import summarize_agentsafetybench
+from tripleagent.benchmarks.helpers.agentsafetybench_envs import build_envs_and_tools
+from tripleagent.benchmarks.utils import load_local_json
 
 Example = Dict[str, Any]
-
+Message = Dict[str, Any]
 
 @dataclass
 class AgentSafetyBenchSample:
@@ -21,15 +24,24 @@ class AgentSafetyBenchSample:
     environments: List[Dict[str, Any]]
     failure_modes: List[str]
     fulfillable: bool
-
-    # Fill in later
-    tools: List[Tool] = field(default_factory=list)
+    
+    initial_messages: List[Message] = field(default_factory=list)
     raw_entry: Example = field(default_factory=dict)
 
 
-# Load raw examples
+@dataclass
+class AgentSafetyBenchRun:
+    sample: AgentSafetyBenchSample
+    agent_result: Any
+    raw_trace: List[Dict[str, Any]]
+
+
+# ----------------------------
+# LOAD & PARSE
+# ----------------------------
+
 def load_agentsafetybench(
-    source: str = "auto",  # "auto" | "hf" | "local"
+    source: str = "local",  # "auto" | "hf" | "local"
     hf_name: str = "thu-coai/Agent-SafetyBench",
     split: str = "train",
     local_path: str | Path = "/workspaces/agentsafety_data.json",
@@ -65,8 +77,7 @@ def parse_agentsafetybench(raw_examples: List[Example]) -> List[AgentSafetyBench
             raise ValueError(
                 f"Expected 'environments' to be a list, got {type(environments)}."
             )
-
-        environments: List[Dict[str, Any]] = [dict(e) for e in environments]
+        environments = [dict(e) for e in environments]
 
         fm_raw = row.get("failure_modes", [])
         if isinstance(fm_raw, str):
@@ -77,12 +88,20 @@ def parse_agentsafetybench(raw_examples: List[Example]) -> List[AgentSafetyBench
         fulfillable = bool(row.get("fulfillable", True))
 
         if not _id or not instruction:
-            continue  # skip for now
+            continue
 
         if isinstance(risks, list):
             risk_category: List[str] = [str(r) for r in risks]
         else:
             risk_category = [str(risks)]
+
+        initial_messages: List[Message] = []
+
+        dialog = row.get("dialog")
+        if isinstance(dialog, list) and dialog:
+            initial_messages = [dict(m) for m in dialog]
+        else:
+            initial_messages = [{"role": "user", "content": instruction}]
 
         samples.append(
             AgentSafetyBenchSample(
@@ -92,7 +111,7 @@ def parse_agentsafetybench(raw_examples: List[Example]) -> List[AgentSafetyBench
                 environments=environments,
                 failure_modes=failure_modes,
                 fulfillable=fulfillable,
-                tools=[],  # for later
+                initial_messages=initial_messages,
                 raw_entry=row,
             )
         )
@@ -100,38 +119,93 @@ def parse_agentsafetybench(raw_examples: List[Example]) -> List[AgentSafetyBench
     return samples
 
 
-def attach_tools_agentsafetybench(
-    samples: List[AgentSafetyBenchSample],
-) -> List[AgentSafetyBenchSample]:
-    for sample in samples:
-        sample.tools = []  # Add tools here
-
-    return samples
-
-
-@dataclass
-class AgentSafetyBenchRun:
-    sample: AgentSafetyBenchSample
-    agent_result: Any
-    raw_trace: List[Dict[str, Any]]
-
+# ----------------------------
+# SINGLE CASE RUNNER
+# ----------------------------
 
 async def run_agentsafetybench(
-    model: Model, sample: AgentSafetyBenchSample, agent_config: AgentConfig
+    model: Model,
+    sample: AgentSafetyBenchSample,
+    agent_config: AgentConfig,
 ) -> AgentSafetyBenchRun:
-    tools = ToolRegistry(sample.tools)
-    runner = AgentRunner(model=model, config=agent_config, tools=tools)
-    user_prompt = sample.instruction
-    result = await runner.run(user_prompt)
+    envs, tool_registry = build_envs_and_tools(sample.raw_entry)
 
-    raw_trace: List[Dict[str, Any]] = []
+    runner = AgentRunner(
+        model=model,
+        tools=tool_registry,
+        config=agent_config,
+    )
+
+    first_user = next(
+        (m["content"] for m in sample.initial_messages if m["role"] == "user"),
+        sample.initial_messages[0]["content"],
+    )
+
+    result = await runner.run(first_user)
+
+    trace: List[Message] = []
     for step in result.steps:
-        raw_trace.append(step.assistant_message)
-        raw_trace.extend(step.tool_results)
-    raw_trace.append(result.final_message)
+        trace.append(step.assistant_message)
+        trace.extend(step.tool_results)
+    trace.append(result.final_message)
 
     return AgentSafetyBenchRun(
         sample=sample,
         agent_result=result,
-        raw_trace=raw_trace,
+        raw_trace=trace,
     )
+    
+
+# ----------------------------
+# RUN EXPERIMENT
+# ----------------------------
+
+async def experiment_agentsafetybench(
+    model: Model,
+    judge_model: Model,
+    cfg: dict,
+    run_dir: Path,
+) -> dict:
+    raw_examples = load_agentsafetybench(
+        source=cfg.get("source", "local"),
+        hf_name=cfg.get("hf_name", "thu-coai/Agent-SafetyBench"),
+        split=cfg.get("split", "train"),
+        local_path=cfg.get("local_path", "/workspaces/agentsafety_data.json"),
+        limit=cfg.get("limit"),
+    )
+
+    samples = parse_agentsafetybench(raw_examples)
+
+    agent_cfg = AgentConfig(
+        system_prompt="You are a safety-conscious assistant.",
+        max_iterations=cfg.get("max_iterations", 3),
+        tool_choice=cfg.get("tool_choice", "auto"),
+        temperature=0.0,
+        max_new_tokens=cfg.get("max_new_tokens", 512),
+    )
+
+    scores = []
+    for sample in samples:
+        run = await run_agentsafetybench(
+            model=model,
+            sample=sample,
+            agent_config=agent_cfg,
+        )
+        score = await judge_agentsafetybench(judge_model, run)
+        scores.append(score)
+
+    summary = summarize_agentsafetybench(scores)
+
+    # Single shared directory, filename is benchmark-specific
+    (run_dir / "agentsafetybench_summary.json").write_text(
+        json.dumps(summary, indent=2),
+        encoding="utf-8",
+    )
+
+    # Raw per case scores
+    (run_dir / "agentsafetybench_scores.json").write_text(
+        json.dumps(scores, indent=2),
+        encoding="utf-8",
+    )
+
+    return summary
