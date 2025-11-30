@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from .config import ModelConfig
-from .base import ChatBackend
 from .backends.openai import OpenAIBackend
 from .backends.huggingface import HuggingFaceBackend
 
 
-def create_backend(config: ModelConfig) -> ChatBackend:
+def create_backend(config: ModelConfig):
     provider = (config.provider or "").lower().strip()
 
     if provider == "openai":
@@ -25,5 +24,4 @@ def create_backend(config: ModelConfig) -> ChatBackend:
 
     raise ValueError(
         f"Unsupported provider '{config.provider}' in ModelConfig. "
-        f"Expected one of: 'openai', 'huggingface'."
     )

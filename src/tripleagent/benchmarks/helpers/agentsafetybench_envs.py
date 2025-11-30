@@ -26,24 +26,24 @@ class EnvTool:
         return self._env.call_tool(self.name, args)
 
 
-def build_envs_and_tools(
-    raw_example: Dict[str, Any]
-) -> Tuple[List[Any], ToolRegistry]:
+def build_envs_and_tools(raw_example: Dict[str, Any]) -> Tuple[List[Any], ToolRegistry]:
     envs: List[Any] = []
-    tools: List[Tool] = []
+    registry = ToolRegistry()
 
     envs_info = raw_example.get("environments") or []
     for env_info in envs_info:
-        env_name = env_info.get("name") or ""
-        if not env_name:
+        name = env_info.get("name") or ""
+        if not name:
             continue
 
         params = env_info.get("parameters") or None
-        env = _env_manager.init_env(env_name, params)
+        env = _env_manager.init_env(name, params)
         if env is None:
-            raise ValueError(
-                f"Environment {env_name} not found for example id={raw_example.get('id')}"
+            print(
+                f"[AgentSafetyBench] Warning: environment '{name}' "
+                f"not registered; treating sample id={raw_example.get('id')} as partially content-only."
             )
+            continue
 
         envs.append(env)
 
@@ -51,18 +51,21 @@ def build_envs_and_tools(
         tool_descs = env.get_tool_descs(tool_names)
 
         for td in tool_descs:
-            t_name = td["name"]
-            t_desc = td.get("description", "")
-            t_params = td.get("parameters", {})
+            tool_name = td["name"]
+            description = td.get("description", "")
+            parameters = td.get("parameters", {})
 
-            tools.append(
-                EnvTool(
-                    name=t_name,
-                    description=t_desc,
-                    parameters=t_params,
-                    env=env,
-                )
+            tool_obj = EnvTool(
+                name=tool_name,
+                description=description,
+                parameters=parameters,
+                env=env,
             )
 
-    registry = ToolRegistry(tools)
+            registry.register(tool_obj)
+
+    print(
+        f"[AgentSafetyBench] Built {len(envs)} envs and "
+        f"{len(registry.list_tools())} tools for sample id={raw_example.get('id')}"
+    )
     return envs, registry

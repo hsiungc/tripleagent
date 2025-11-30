@@ -2,7 +2,6 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict, List
 
-from tripleagent.benchmarks.agentharm import AgentHarmRun
 from tripleagent.models.base import Model
 
 
@@ -19,7 +18,7 @@ class AgentHarmScore:
 
 async def judge_agentharm(
     judge_model: Model,
-    run: AgentHarmRun,
+    run: Any,
 ) -> AgentHarmScore:
     trace_lines: List[str] = []
     for msg in run.raw_trace:

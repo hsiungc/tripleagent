@@ -1,4 +1,5 @@
-from typing import Any, Dict, List, Protocol, runtime_checkable
+from typing import Any, Dict, List, Protocol, Awaitable, Callable, runtime_checkable, Optional
+from dataclasses import dataclass, field
 
 Message = Dict[str, Any]
 
@@ -12,13 +13,29 @@ class Tool(Protocol):
     async def __call__(self, args: Dict[str, Any]) -> Any: ...
 
 
+@dataclass
+class EnvTool:
+    name: str
+    description: str
+    parameters: Dict[str, Any] = field(default_factory=dict)
+    handler: Optional[Callable[[Dict[str, Any]], Awaitable[Any]]] = field(default=None)
+
+    async def __call__(self, args: Dict[str, Any]) -> Any:
+        if self.handler is None:
+            raise RuntimeError(f"No handler set for tool '{self.name}'.")
+        return await self.handler(args)
+
+
 class ToolRegistry:
     def __init__(self, tools: List[Tool] | None = None) -> None:
         self._tools: Dict[str, Tool] = {}
         if tools:
             for tool in tools:
                 self._tools[tool.name] = tool
-
+                
+    def register(self, tool: Tool) -> None:
+        self._tools[tool.name] = tool
+        
     def get(self, name: str) -> Tool:
         if name not in self._tools:
             raise KeyError(f"Tool '{name}' not found in registry.")

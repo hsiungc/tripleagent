@@ -6,7 +6,7 @@ All files in this directory (including LICENSE) have been directly taken from th
 Commit: 873b35a (11/27/2025)
 License: Apache-2.0
 
-Only minimal pruning was done. All local modifications (if any) are documented below.
+Only minimal file pruning was performed. All local modifications (if any) are documented below.
 
 ## Local modifications
 - Refactored `eval.py` to run in TripleAgent pipeline.

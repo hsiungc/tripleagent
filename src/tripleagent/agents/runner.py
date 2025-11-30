@@ -54,7 +54,11 @@ class AgentRunner:
         steps: List[AgentStep] = []
         usage_stats: List[Dict[str, Any]] = []
         tools_schema = self.tools.get_tool_specs()
+        print(f"[AgentRunner] tools_schema has {len(tools_schema)} tools")
 
+        for spec in tools_schema:
+            print("  - tool name:", spec["function"]["name"])
+    
         if self.config.max_iterations > 0:
             iterator = range(1, self.config.max_iterations + 1)
         else:

@@ -22,7 +22,7 @@ async def main(exp_path: str) -> None:
     benchmarks_cfg = exp_cfg["benchmarks"]
 
     tripleagent_root = Path(__file__).resolve().parent
-    runs_root = tripleagent_root / "outputs" / "runs"
+    runs_root = tripleagent_root / "outputs"
     runs_root.mkdir(parents=True, exist_ok=True)
 
     if "output_dir" in exp_cfg:

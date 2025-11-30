@@ -19,6 +19,17 @@ judge_model:
   extra:
     response_format: "json"
 
+# judge_model:
+#   provider: huggingface
+#   name: "thu-coai/ShieldAgent"
+#   max_new_tokens: 256
+#   temperature: 0.0
+#   api_base: "https://api-inference.huggingface.co/models"
+#   api_key_env: "HF_API_TOKEN"
+#   extra:
+#     max_new_tokens: 256
+#     temperature: 0.0
+
 benchmarks:
   agentbench:
     enabled: False
@@ -36,7 +47,7 @@ benchmarks:
     max_steps: 1
 
   agentharm:
-    enabled: True
+    enabled: False
     source: "hf"
     hf_name: "ai-safety-institute/AgentHarm"
     split: "test_public"

@@ -6,3 +6,8 @@ All files in this directory (including LICENSE) have been directly taken from th
 
 Commit: 74feea8 (11/28/2025)
 License: MIT
+
+Only minimal file pruning was performed. All local modifications (if any) are documented below.
+
+## Local modifications
+- Refactored `EnvManager.py` to point relative to the TripleAgent pipeline.

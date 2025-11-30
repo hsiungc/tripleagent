@@ -1,28 +1,32 @@
+from __future__ import annotations
+
 import os
-from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from openai import AsyncOpenAI
+import httpx
 
 from ..config import ModelConfig
 from ..base import ChatBackend, Message, ToolSpec
 
 
-@dataclass
 class OpenAIBackend(ChatBackend):
-    config: ModelConfig
+    def __init__(self, config: ModelConfig) -> None:
+        self.config = config
 
-    def __post_init__(self) -> None:
-        api_key = os.getenv(self.config.api_key_env, "")
+        api_key = os.getenv(config.api_key_env or "OPENAI_API_KEY")
         if not api_key:
             raise ValueError(
-                f"API key not found in environment variable: {self.config.api_key_env}"
+                f"OpenAI API key not found in environment variable {config.api_key_env or 'OPENAI_API_KEY'}."
             )
+        self._api_key = api_key
 
-        client_params: Dict[str, Any] = {"api_key": api_key}
-        # if self.config.api_base:
-        #     client_params["api_base"] = self.config.api_base
-        self.client = AsyncOpenAI(**client_params)
+        base = (config.api_base or "https://api.openai.com").rstrip("/")
+        self._endpoint = f"{base}/chat/completions"
+
+        self._client = httpx.AsyncClient(
+            timeout=60.0,
+            headers={"Authorization": f"Bearer {self._api_key}"},
+        )
 
     async def chat(
         self,
@@ -32,53 +36,39 @@ class OpenAIBackend(ChatBackend):
         model: Optional[str] = None,
         **kwargs: Any,
     ) -> Dict[str, Any]:
-        params: Dict[str, Any] = {
+        payload: Dict[str, Any] = {
             "model": model or self.config.name,
             "messages": messages,
         }
 
+        if "temperature" in kwargs:
+            payload["temperature"] = kwargs["temperature"]
+        if "max_tokens" in kwargs:
+            payload["max_tokens"] = kwargs["max_tokens"]
+        elif "max_new_tokens" in kwargs:
+            payload["max_tokens"] = kwargs["max_new_tokens"]
+
         if tools:
-            params["tools"] = tools
-        if tool_choice:
-            params["tool_choice"] = tool_choice
+            payload["tools"] = tools
+            if tool_choice in ("auto", "none"):
+                payload["tool_choice"] = tool_choice
+            elif tool_choice is not None:
+                payload["tool_choice"] = tool_choice
 
-        params.setdefault("max_tokens", self.config.max_new_tokens)
-        params.setdefault("temperature", self.config.temperature)
+        print(f"[OpenAIBackend] Sending tools={bool(tools)} tool_choice={tool_choice}")
 
-        params.update(kwargs)
+        resp = await self._client.post(self._endpoint, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
 
-        response = await self.client.chat.completions.create(**params)
+        choices = data.get("choices", [])
+        if not choices:
+            raise RuntimeError(f"No choices returned from OpenAI: {data}")
 
-        choice = response.choices[0]
-        message = choice.message
-
-        normalized_response: Message = {
-            "role": message.role,
-            "content": message.content,
-        }
-
-        if message.tool_calls:
-            normalized_response["tool_calls"] = [
-                {
-                    "id": tc.id,
-                    "type": tc.type,
-                    "function": {
-                        "name": tc.function.name,
-                        "arguments": tc.function.arguments,
-                    },
-                }
-                for tc in message.tool_calls
-            ]
-
-        usage = None
-        if response.usage:
-            usage = {
-                "input_tokens": response.usage.prompt_tokens,
-                "output_tokens": response.usage.completion_tokens,
-                "total_tokens": response.usage.total_tokens,
-            }
+        message = choices[0].get("message", {})
+        usage = data.get("usage", {})
 
         return {
-            "response": normalized_response,
+            "response": message,
             "usage": usage,
         }

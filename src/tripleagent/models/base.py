@@ -4,7 +4,6 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
-from .factory import create_backend
 from .config import ModelConfig
 
 Message = Dict[str, Any]
@@ -31,9 +30,11 @@ class Model:
 
     @classmethod
     def from_yaml(cls, yaml_path: str, section: str = "model") -> "Model":
-        cfg = ModelConfig.from_yaml(yaml_path, section=section)
-        backend = create_backend(cfg)
-        return cls(name=cfg.name, backend=backend, config=cfg)
+        from .factory import create_backend
+        
+        config = ModelConfig.from_yaml(yaml_path, section=section)
+        backend = create_backend(config)
+        return cls(name=config.name, backend=backend, config=config)
 
     async def chat(
         self,
@@ -47,6 +48,6 @@ class Model:
             messages=messages,
             tools=tools,
             tool_choice=tool_choice,
-            model=model,
+            model=model or self.name,
             **kwargs,
         )
