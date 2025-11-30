@@ -42,9 +42,9 @@ benchmarks:
     source: "local"
     hf_name: "thu-coai/Agent-SafetyBench"
     split: "train"
-    limit: 50
-    tool_choice: "none"
-    max_steps: 1
+    limit: 5
+    tool_choice: "auto"
+    max_iterations: 2
 
   agentharm:
     enabled: False
