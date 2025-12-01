@@ -1,20 +1,24 @@
+from __future__ import annotations
+
 import json
 import shutil
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 from huggingface_hub import snapshot_download
 
 from tripleagent.agents.runner import AgentConfig, AgentRunner
-from tripleagent.agents.tools import Tool, ToolRegistry
 from tripleagent.models.base import Model
+from tripleagent.benchmarks.helpers.agentharm_tools import build_tools_for_sample
+from tripleagent.benchmarks.helpers.agentharm_prompts import get_system_prompt
 from tripleagent.scoring.agentharm import judge_agentharm
 from tripleagent.reporting.agentharm import summarize_agentharm
 
 from .utils import load_local_json
 
 Example = Dict[str, Any]
+Message = Dict[str, Any]
 
 
 @dataclass
@@ -24,21 +28,34 @@ class AgentHarmSample:
     prompt: str
     category: str
     split: str
+    is_harmful: bool          # True for harmful set, False for benign
+    raw_entry: Example
 
-    label: Optional[str] = None
 
-    tools: List[Tool] = field(default_factory=list)
-    raw_entry: Example = field(default_factory=dict)
+@dataclass
+class AgentHarmRun:
+    sample: AgentHarmSample
+    agent_result: Any         # AgentRunResult-like object from AgentRunner
+    raw_trace: List[Message]
 
+
+# -------------------------------------------------------------------
+# Dataset loading
+# -------------------------------------------------------------------
 
 def load_agentharm(
     source: str = "auto",  # "auto" | "hf" | "local"
     hf_name: str = "ai-safety-institute/AgentHarm",
+    task_name: Literal["harmful", "benign", "chat"] = "harmful",
     split: Literal["val", "test_public", "test_private"] = "test_public",
-    local_path: str | Path = "/workspaces/agentharm_behaviors.json",
+    local_path: Optional[str | Path] = None,
     limit: Optional[int] = None,
     cache_dir: Optional[Path] = None,
 ) -> List[Example]:
+    """
+    Load raw AgentHarm behaviors (JSON dicts), either from HF or a local file.
+    """
+    # HF path (default)
     if source in ("hf", "auto"):
         try:
             if cache_dir is None:
@@ -71,16 +88,12 @@ def load_agentharm(
                 },
             }
 
-            # For now, default to harmful task
-            name = "harmful"
-            if name not in split_dict or split not in split_dict[name]:
-                raise ValueError(f"Invalid AgentHarm split: {name}/{split}")
+            if task_name not in split_dict or split not in split_dict[task_name]:
+                raise ValueError(f"[AgentHarm] Invalid split: {task_name}/{split}")
 
-            input_json_file = cache_dir / split_dict[name][split]
+            input_json_file = cache_dir / split_dict[task_name][split]
             if not input_json_file.exists():
-                raise FileNotFoundError(
-                    f"[AgentHarm] File not found: {input_json_file}"
-                )
+                raise FileNotFoundError(f"[AgentHarm] File not found: {input_json_file}")
 
             with input_json_file.open("r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -103,19 +116,29 @@ def load_agentharm(
                 shutil.rmtree(cache_dir, ignore_errors=True)
 
     # Local fallback
-    examples = load_local_json(local_path, limit=limit)
+    if local_path is None:
+        raise ValueError(
+            "[AgentHarm] local_path must be provided when 'source' is 'local' "
+            "or HF download failed."
+        )
+
+    examples = load_local_json(Path(local_path), limit=limit)
     return examples
 
 
-def parse_agentharm(raw_examples: List[Example]) -> List[AgentHarmSample]:
+def parse_agentharm(
+    raw_examples: List[Example],
+    task_name: Literal["harmful", "benign", "chat"] = "harmful",
+) -> List[AgentHarmSample]:
     samples: List[AgentHarmSample] = []
+    is_harmful = task_name == "harmful"
+
     for row in raw_examples:
         _id = row.get("id")
-        scenario = row.get("scenario")
-        prompt = row.get("prompt")
-        category = row.get("category")
-        split = row.get("split")
-        label = row.get("label")
+        scenario = row.get("scenario", "")
+        prompt = row.get("prompt", "")
+        category = row.get("category", "unknown")
+        split = row.get("split", "unknown")
 
         if not _id or not prompt:
             continue
@@ -127,105 +150,12 @@ def parse_agentharm(raw_examples: List[Example]) -> List[AgentHarmSample]:
                 prompt=str(prompt),
                 category=str(category),
                 split=str(split),
-                label=str(label) if label is not None else None,
-                tools=[],
+                is_harmful=is_harmful,
                 raw_entry=row,
             )
         )
 
     return samples
-
-
-def attach_tools_agentharm(
-    samples: List[AgentHarmSample],
-) -> List[AgentHarmSample]:
-    for sample in samples:
-        sample.tools = []  # Add tools here
-
-    return samples
-
-
-@dataclass
-class AgentHarmRun:
-    sample: AgentHarmSample
-    agent_result: Any
-    raw_trace: List[Dict[str, Any]]
-
-
-async def run_agentharm(
-    sample: AgentHarmSample, model: Model, agent_config: AgentConfig
-) -> AgentHarmRun:
-    tools = ToolRegistry(sample.tools)
-    runner = AgentRunner(model=model, config=agent_config, tools=tools)
-    user_prompt = sample.prompt
-    result = await runner.run(user_prompt)
-
-    raw_trace: List[Dict[str, Any]] = []
-    for step in result.steps:
-        raw_trace.append(step.assistant_message)
-        raw_trace.extend(step.tool_results)
-    raw_trace.append(result.final_message)
-
-    return AgentHarmRun(sample=sample, agent_result=result, raw_trace=raw_trace)
-
-
-# def load_agentharm_behaviors(
-#     name: Literal["harmful", "benign", "chat"] = "harmful",
-#     split: Literal["val", "test_public", "test_private"] = "test_public",
-#     cache_dir: Optional[Path] = None,
-# ) -> List[Example]:
-#     if cache_dir is None:
-#         cache_dir = Path(".cache") / "agentharm_dataset" / "AgentHarm"
-#     cache_dir.mkdir(parents=True, exist_ok=True)
-
-#     try:
-#         snapshot_download(
-#             repo_id="ai-safety-institute/AgentHarm",
-#             repo_type="dataset",
-#             local_dir=cache_dir,
-#             allow_patterns="**/*.json",
-#             resume_download=True,
-#         )
-#     except Exception as ex:
-#         print(f"[AgentHarm] Error downloading dataset: {ex}")
-#         shutil.rmtree(cache_dir, ignore_errors=True)
-#         raise
-
-#     split_dict = {
-#         "harmful": {
-#             "val": "benchmark/harmful_behaviors_validation.json",
-#             "test_public": "benchmark/harmful_behaviors_test_public.json",
-#             "test_private": "benchmark/harmful_behaviors_test_private.json",
-#         },
-#         "benign": {
-#             "val": "benchmark/benign_behaviors_validation.json",
-#             "test_public": "benchmark/benign_behaviors_test_public.json",
-#             "test_private": "benchmark/benign_behaviors_test_private.json",
-#         },
-#         "chat": {
-#             "val": "benchmark/chat_validation.json",
-#             "test_public": "benchmark/chat_public_test.json",
-#             "test_private": "benchmark/chat_private_test.json",
-#         },
-#     }
-
-#     if name not in split_dict:
-#         raise ValueError(f"Dataset {name} is not available.")
-#     if split not in split_dict[name]:
-#         raise ValueError(f"Split {split} is not available.")
-
-#     input_json_file = cache_dir / split_dict[name][split]
-#     if not input_json_file.exists():
-#         raise FileNotFoundError(f"[AgentHarm] File not found: {input_json_file}")
-
-#     with input_json_file.open("r", encoding="utf-8") as f:
-#         data = json.load(f)
-
-#     behaviors = data.get("behaviors", [])
-#     if not isinstance(behaviors, list):
-#         raise ValueError("[AgentHarm] Expected 'behaviors' to be a list in the JSON.")
-
-#     return behaviors
 
 
 def filter_behaviors(
@@ -251,47 +181,106 @@ def filter_behaviors(
     return filtered
 
 
+async def run_agentharm(
+    sample: AgentHarmSample,
+    model: Model,
+    agent_config: AgentConfig,
+) -> AgentHarmRun:
+    tool_registry = build_tools_for_sample(
+        raw_example=sample.raw_entry,
+        task_name="harmful" if sample.is_harmful else "benign",
+    )
+
+    runner = AgentRunner(
+        model=model,
+        tools=tool_registry,
+        config=agent_config,
+    )
+
+    result = await runner.run(sample.prompt)
+
+    trace: List[Message] = []
+    for step in result.steps:
+        trace.append(step.assistant_message)
+        trace.extend(step.tool_results)
+    trace.append(result.final_message)
+
+    return AgentHarmRun(
+        sample=sample,
+        agent_result=result,
+        raw_trace=trace,
+    )
+
+
 async def experiment_agentharm(
     model: Model,
     judge_model: Model,
     cfg: dict,
     run_dir: Path,
 ) -> dict:
+    task_name: Literal["harmful", "benign", "chat"] = cfg.get("task_name", "harmful")
+
     raw = load_agentharm(
         source=cfg.get("source", "hf"),
         hf_name=cfg.get("hf_name", "ai-safety-institute/AgentHarm"),
+        task_name=task_name,
         split=cfg.get("split", "test_public"),
+        local_path=cfg.get("local_path"),
         limit=cfg.get("limit"),
     )
 
-    samples = parse_agentharm(raw)
-    samples = attach_tools_agentharm(samples)
+    raw = filter_behaviors(
+        raw,
+        behavior_ids=cfg.get("behavior_ids"),
+        detailed_behaviors=cfg.get("detailed_behaviors"),
+        hint_included=cfg.get("hint_included"),
+    )
+
+    samples = parse_agentharm(raw, task_name=task_name)
+
+    # Official AgentHarm prompts from the paper (via helper)
+    system_prompt_template = cfg.get("system_prompt_template", "default")
+    prompt_technique = cfg.get("prompt_technique", "standard")
+
+    system_prompt = get_system_prompt(
+        system_prompt_template=system_prompt_template,
+        prompt_technique=prompt_technique,
+    )
 
     agent_cfg = AgentConfig(
-        system_prompt="You are a safety-conscious assistant.",
+        system_prompt=system_prompt,
         max_iterations=cfg.get("max_iterations", 3),
         tool_choice=cfg.get("tool_choice", "auto"),
         temperature=0.0,
         max_new_tokens=cfg.get("max_new_tokens", 512),
     )
 
+    refusal_judge_model = judge_model
+    semantic_judge_model = judge_model
+
     scores = []
-    for s in samples:
-        run = await run_agentharm(s, model, agent_cfg)
-        score = await judge_agentharm(judge_model, run)
+    for sample in samples:
+        run_result = await run_agentharm(
+            sample=sample,
+            model=model,
+            agent_config=agent_cfg,
+        )
+        score = await judge_agentharm(
+            sample=sample,
+            run_result=run_result,
+            refusal_judge_model=refusal_judge_model,
+            semantic_judge_model=semantic_judge_model,
+        )
         scores.append(score)
 
     summary = summarize_agentharm(scores)
 
-    # Single shared directory, benchmark-specific filename
     (run_dir / "agentharm_summary.json").write_text(
         json.dumps(summary, indent=2),
         encoding="utf-8",
     )
-
-    # Raw per case scores
     (run_dir / "agentharm_scores.json").write_text(
-        json.dumps(scores, indent=2),
+        json.dumps([s.__dict__ for s in scores], indent=2),
         encoding="utf-8",
     )
 

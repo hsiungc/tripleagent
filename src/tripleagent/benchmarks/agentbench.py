@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import asyncio
 import subprocess
 import sys
@@ -50,56 +51,23 @@ def run_agentbench(
 
     
 
-async def experiment_agentbench(
-    cfg: Dict[str, Any],
-    run_dir: Path,
-    model: Model,
-    exp_path: str,
-) -> Dict[str, Any]:
-    agentbench_root = Path(__file__).resolve().parents[2] / "thirdparty" / "agentbench"
-    eval_py = agentbench_root / "eval.py"
+async def experiment_agentbench(cfg: dict, run_dir: Path, model: Model) -> dict:
+    task_out_dir = run_dir / "agentbench_knowledgegraph"
+    metrics_path = task_out_dir / "metrics.json"
 
-    task_config_rel = cfg.get("task_config", "configs/tasks/knowledgegraph/dev.yaml")
-    task_cfg_path = agentbench_root / task_config_rel
+    if metrics_path.exists():
+        metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+    else:
+        metrics = {}
 
-    # Use the shared run_dir directly
-    out_dir = run_dir
-
-    workers = str(cfg.get("workers", 4))
-    model_section = cfg.get("model_section", "model")
-
-    cmd = [
-        sys.executable,
-        str(eval_py),
-        "--task",
-        str(task_cfg_path),
-        "--exp-config",
-        str(exp_path),
-        "--model-section",
-        model_section,
-        "--output",
-        str(out_dir),
-        "--workers",
-        workers,
-    ]
-
-    print("[AgentBench] Running:", " ".join(cmd))
-
-    proc = await asyncio.create_subprocess_exec(
-        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
-    stdout, stderr = await proc.communicate()
-
-    if proc.returncode != 0:
-        raise RuntimeError(
-            f"AgentBench eval.py exited with code {proc.returncode}.\n"
-            f"stdout: {stdout.decode() if stdout else ''}\n"
-            f"stderr: {stderr.decode() if stderr else ''}"
-        )
-
-    return {
-        "output_dir": str(out_dir),
-        "task_config": str(task_cfg_path),
-        "exp_config": str(exp_path),
-        "model_section": model_section,
+    summary = {
+        "task": cfg.get("task_name", "knowledgegraph"),
+        "metrics": metrics,
     }
+
+    (run_dir / "agentbench_summary.json").write_text(
+        json.dumps(summary, indent=2),
+        encoding="utf-8",
+    )
+
+    return summary

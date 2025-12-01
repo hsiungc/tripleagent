@@ -30,15 +30,23 @@ judge_model:
 #     max_new_tokens: 256
 #     temperature: 0.0
 
+refusal_judge_model:
+  provider: openai
+  name: gpt-4o-2024-08-06
+
+semantic_judge_model:
+  provider: openai
+  name: gpt-4o-2024-08-06
+
 benchmarks:
   agentbench:
-    enabled: False
+    enabled: True
     task_config: "configs/tasks/knowledgegraph/dev.yaml"
     agent_config: "configs/agents/do_nothing.yaml"
     output_dir: outputs/agentbench/run
 
   agentsafetybench:
-    enabled: True
+    enabled: False
     source: "local"
     hf_name: "thu-coai/Agent-SafetyBench"
     split: "train"
@@ -48,9 +56,15 @@ benchmarks:
 
   agentharm:
     enabled: False
-    source: "hf"
-    hf_name: "ai-safety-institute/AgentHarm"
-    split: "test_public"
-    limit: 50
-    tool_choice: "auto"
-    max_steps: 3
+    task_name: harmful
+    split: test_public
+    system_prompt_template: default      # or "llama-3.1"
+    prompt_technique: standard           # "cot", "react", "refusal"
+    behavior_ids: []
+    detailed_behaviors: null
+    hint_included: null
+    n_irrelevant_tools: 0
+    limit: 5
+    max_iterations: 3
+    tool_choice: auto
+    max_new_tokens: 512

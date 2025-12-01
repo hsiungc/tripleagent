@@ -1,8 +1,8 @@
 import asyncio
+import datetime
 import json
 import sys
 from pathlib import Path
-from datetime import datetime
 
 import yaml
 
@@ -13,64 +13,85 @@ from tripleagent.benchmarks.agentbench import experiment_agentbench
 
 
 async def main(exp_path: str) -> None:
+    print(f"[run_experiment] Loading experiment config from {exp_path}", flush=True)
     with open(exp_path, "r", encoding="utf-8") as f:
         exp_cfg = yaml.safe_load(f)
 
+    outputs_root = Path(exp_cfg.get("output_root", "outputs"))
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    run_dir = outputs_root / timestamp
+    run_dir.mkdir(parents=True, exist_ok=True)
+    print(f"[run_experiment] Run directory: {run_dir}", flush=True)
+
+    (run_dir / "experiment_config.json").write_text(
+        json.dumps(exp_cfg, indent=2),
+        encoding="utf-8",
+    )
+
+    # ---- load models from the same YAML ----
+    print("[run_experiment] Loading models…", flush=True)
     model = Model.from_yaml(exp_path, section="model")
     judge_model = Model.from_yaml(exp_path, section="judge_model")
+    print(
+        f"[run_experiment] main model={model.name}, judge model={judge_model.name}",
+        flush=True,
+    )
 
-    benchmarks_cfg = exp_cfg["benchmarks"]
+    benchmarks_cfg = exp_cfg.get("benchmarks", {})
+    summaries: dict[str, dict] = {}
 
-    tripleagent_root = Path(__file__).resolve().parent
-    runs_root = tripleagent_root / "outputs"
-    runs_root.mkdir(parents=True, exist_ok=True)
-
-    if "output_dir" in exp_cfg:
-        custom = Path(exp_cfg["output_dir"])
-        if not custom.is_absolute():
-            run_dir = runs_root / custom
-        else:
-            run_dir = custom
-    else:
-        ts = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        run_dir = runs_root / ts
-
-    run_dir.mkdir(parents=True, exist_ok=True)
-    print(f"[run_experiment] Writing all benchmark outputs to: {run_dir}")
-
-    summaries = {}
-
+    # ---- Agent-SafetyBench ----
     if benchmarks_cfg.get("agentsafetybench", {}).get("enabled", False):
+        print("[run_experiment] Running Agent-SafetyBench…", flush=True)
         summaries["agentsafetybench"] = await experiment_agentsafetybench(
             model=model,
             judge_model=judge_model,
             cfg=benchmarks_cfg["agentsafetybench"],
             run_dir=run_dir,
         )
+        print("[run_experiment] Agent-SafetyBench done.", flush=True)
 
+    # ---- AgentHarm ----
     if benchmarks_cfg.get("agentharm", {}).get("enabled", False):
+        print("[run_experiment] Running AgentHarm…", flush=True)
         summaries["agentharm"] = await experiment_agentharm(
             model=model,
             judge_model=judge_model,
             cfg=benchmarks_cfg["agentharm"],
             run_dir=run_dir,
         )
+        print("[run_experiment] AgentHarm done.", flush=True)
 
+    # ---- AgentBench ----
     if benchmarks_cfg.get("agentbench", {}).get("enabled", False):
+        print("[run_experiment] Running AgentBench…", flush=True)
         summaries["agentbench"] = await experiment_agentbench(
             cfg=benchmarks_cfg["agentbench"],
             run_dir=run_dir,
             model=model,
-            exp_path=exp_path,
         )
+        print("[run_experiment] AgentBench done.", flush=True)
 
-    (run_dir / "combined_summary.json").write_text(
+    combined_path = run_dir / "combined_summary.json"
+    combined_path.write_text(
         json.dumps(summaries, indent=2),
         encoding="utf-8",
     )
-    print("Combined summary written to", run_dir / "combined_summary.json")
+    print("[run_experiment] Combined summary written to", combined_path, flush=True)
 
 
 if __name__ == "__main__":
-    exp_path = sys.argv[1] if len(sys.argv) > 1 else "configs/experiments/default.yaml"
-    asyncio.run(main(exp_path))
+    try:
+        if len(sys.argv) < 2:
+            print(
+                "Usage: python scripts/run_experiment.py configs/experiments/<file>.yaml"
+            )
+            sys.exit(1)
+
+        asyncio.run(main(sys.argv[1]))
+    except Exception as e:
+        import traceback
+
+        print("[run_experiment] ERROR:", e, file=sys.stderr)
+        traceback.print_exc()
+        sys.exit(1)
