@@ -1,5 +1,5 @@
 import asyncio
-import datetime
+from datetime import datetime
 import json
 import sys
 from pathlib import Path
@@ -18,7 +18,7 @@ async def main(exp_path: str) -> None:
         exp_cfg = yaml.safe_load(f)
 
     outputs_root = Path(exp_cfg.get("output_root", "outputs"))
-    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     run_dir = outputs_root / timestamp
     run_dir.mkdir(parents=True, exist_ok=True)
     print(f"[run_experiment] Run directory: {run_dir}", flush=True)
@@ -28,7 +28,6 @@ async def main(exp_path: str) -> None:
         encoding="utf-8",
     )
 
-    # ---- load models from the same YAML ----
     print("[run_experiment] Loading models…", flush=True)
     model = Model.from_yaml(exp_path, section="model")
     judge_model = Model.from_yaml(exp_path, section="judge_model")

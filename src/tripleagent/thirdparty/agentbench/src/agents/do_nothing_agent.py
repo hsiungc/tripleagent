@@ -1,4 +1,4 @@
-from src.agent import Agent
+from ..agent import Agent
 from typing import List, Dict, Any, Optional, Union, Tuple, Callable, Type, TypeVar
 import os
 import json

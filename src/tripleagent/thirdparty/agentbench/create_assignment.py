@@ -19,13 +19,13 @@ import yaml
 from os.path import join, isdir, isfile, relpath
 from glob import glob
 
-from src import YAMLConfig, print_rank_0, Task, Agent, serialize
+from .src import YAMLConfig, print_rank_0, Task, Agent, serialize
 from pydantic import BaseModel
 from copy import deepcopy
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
 import shlex
-from src.utils import ColorMessage
+from .src.utils import ColorMessage
 import signal
 import traceback
 import subprocess
@@ -36,11 +36,22 @@ class InstanceFactory(BaseModel):
     module: str
     parameters: Dict[str, Any]
     
-    def create(self) -> Union[Task, Agent]:
-        path = ".".join(self.module.split(".")[:-1])
-        mod = __import__(path, fromlist=[self.module.split(".")[-1]])
-        # print(mod)
-        return getattr(mod, self.module.split(".")[-1])(**self.parameters)
+    def create(self):
+        full_module_path = self.module
+
+        # Rewrite AgentBench-internal 'src.*' to the vendored package path
+        if full_module_path.startswith("src."):
+            full_module_path = (
+                "tripleagent.thirdparty.agentbench." + full_module_path
+            )
+        elif full_module_path == "src":
+            full_module_path = "tripleagent.thirdparty.agentbench.src"
+
+        module_path, class_name = full_module_path.rsplit(".", 1)
+
+        mod = __import__(module_path, fromlist=[class_name])
+        cls = getattr(mod, class_name)
+        return cls(**self.parameters)
     
     def pretty(self, offset=0):
         ret = "    " * offset + f"Module: {self.module}"

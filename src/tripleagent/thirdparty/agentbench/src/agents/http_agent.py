@@ -1,4 +1,4 @@
-from src.agent import Agent
+from ..agent import Agent
 import time
 import requests
 from typing import List, Dict, Any, Optional, Union, Tuple, Callable, Type, TypeVar

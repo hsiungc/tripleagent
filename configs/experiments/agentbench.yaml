@@ -1,5 +1,0 @@
-benchmark:
-  type: agentbench
-  task_config: configs/tasks/knowledgegraph/dev.yaml      # relative to thirdparty/agentbench
-  agent_config: configs/agents/do_nothing.yaml   # relative to thirdparty/agentbench
-  output_dir: outputs/agentbench/run1

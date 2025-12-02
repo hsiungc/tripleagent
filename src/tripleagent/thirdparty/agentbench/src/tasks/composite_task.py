@@ -1,5 +1,5 @@
-from src.task import Task, Dataset, DataPiece, Session
-from src.configs import YAMLConfig
+from ..task import Task, Dataset, DataPiece, Session
+from ..configs import YAMLConfig
 import os
 import json
 import sys
@@ -10,8 +10,8 @@ import random
 import datetime
 import argparse
 import requests
-from src.agent import Agent, Session
-from src.utils import serialize
+from ..agent import Agent, Session
+from ..utils import serialize
 from typing import Dict, Callable, Type, Tuple, List, Any, Union, Iterable, Generic, TypeVar
 
 

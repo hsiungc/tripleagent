@@ -1,7 +1,0 @@
-model:
-  provider: hf_inference
-  name: moonshotai/Kimi-K2-Instruct-0905
-  max_new_tokens: 512
-  temperature: 0.0
-  api_base: https://router.huggingface.co/v1
-  api_key_env: HF_TOKEN

@@ -19,31 +19,12 @@ judge_model:
   extra:
     response_format: "json"
 
-# judge_model:
-#   provider: huggingface
-#   name: "thu-coai/ShieldAgent"
-#   max_new_tokens: 256
-#   temperature: 0.0
-#   api_base: "https://api-inference.huggingface.co/models"
-#   api_key_env: "HF_API_TOKEN"
-#   extra:
-#     max_new_tokens: 256
-#     temperature: 0.0
-
-refusal_judge_model:
-  provider: openai
-  name: gpt-4o-2024-08-06
-
-semantic_judge_model:
-  provider: openai
-  name: gpt-4o-2024-08-06
-
 benchmarks:
   agentbench:
     enabled: True
-    task_config: "configs/tasks/knowledgegraph/dev.yaml"
-    agent_config: "configs/agents/do_nothing.yaml"
-    output_dir: outputs/agentbench/run
+    task_config: "configs/tasks/knowledgegraph/dev_small.yaml"      # Knowledge Graph
+    agent_config: "configs/agents/api_agents/gpt-4.yaml"
+    limit: 5
 
   agentsafetybench:
     enabled: False

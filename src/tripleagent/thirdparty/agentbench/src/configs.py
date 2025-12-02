@@ -2,8 +2,8 @@ from __future__ import annotations
 from dataclass_wizard import YAMLWizard
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Union, Tuple, Callable, Type, TypeVar
-from src.agent import Agent
-from src.task import Task
+from .agent import Agent
+from .task import Task
 
 
 @dataclass

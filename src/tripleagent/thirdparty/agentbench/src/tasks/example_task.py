@@ -1,4 +1,4 @@
-from src.task import Task, Dataset, DataPiece, Session
+from ..task import Task, Dataset, DataPiece, Session
 import os
 import json
 import sys

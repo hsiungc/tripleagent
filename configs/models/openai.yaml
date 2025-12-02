@@ -1,8 +1,0 @@
-model:
-  provider: openai
-  name: gpt-4.1-mini
-  max_new_tokens: 512
-  temperature: 0.0
-  # api_base: null
-  api_key_env: OPENAI_API_KEY
-  extra: {}

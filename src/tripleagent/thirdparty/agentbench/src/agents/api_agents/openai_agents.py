@@ -1,5 +1,5 @@
 import openai
-from src.agent import Agent
+from ...agent import Agent
 import os
 import json
 import sys

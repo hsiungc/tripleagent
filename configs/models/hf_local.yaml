@@ -1,7 +1,0 @@
-model:
-  provider: hf_local
-  name: meta-llama/Llama-3.1-8B
-  max_new_tokens: 512
-  temperature: 0.0
-  # api_base: null
-  api_key_env: ""

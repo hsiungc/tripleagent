@@ -1,4 +1,4 @@
-from src.task import Task, Dataset, DataPiece
+from ...task import Task, Dataset, DataPiece
 from .api import *
 from .utils.sparql_executer import SparqlExecuter
 
@@ -162,8 +162,17 @@ class KnowledgeGraph(Task):
 
     def get_data(self):
         data = Dataset()
-        with open(self.data_fn, "r") as f:
+        
+        repo_root = Path(__file__).resolve().parents[4]
+        data_path = repo_root / "agentbench" / self.data_fn
+
+        if not data_path.exists():
+            raise FileNotFoundError(f"KnowledgeGraph data file not found: {data_path}")
+
+        with data_path.open("r", encoding="utf-8") as f:
             data_object = json.load(f)
+        # with open(self.data_fn, "r") as f:
+        #     data_object = json.load(f)
         for item in data_object:
             answer = item.pop("answer")
             gold_answer = set()

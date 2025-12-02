@@ -3,7 +3,7 @@ import os, json, sys, time, re, math, random, datetime, argparse, requests
 from typing import List, Dict, Any, Union
 
 from fastchat.model.model_adapter import get_conversation_template
-from src.agent import Agent
+from ..agent import Agent
 
 # import TimeoutException
 from requests.exceptions import Timeout, ConnectionError

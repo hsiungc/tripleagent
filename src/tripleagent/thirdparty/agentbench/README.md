@@ -9,4 +9,6 @@ License: Apache-2.0
 Only minimal file pruning was performed. All local modifications (if any) are documented below.
 
 ## Local modifications
-- Refactored `eval.py` to run in TripleAgent pipeline.
+- Refactor `eval.py` to run in TripleAgent pipeline.
+- Rewrite relative imports in AgentBench directory.
+- Rewrite `create_assignment.py` to point to vendored package path.
