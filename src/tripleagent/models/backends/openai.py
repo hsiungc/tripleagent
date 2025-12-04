@@ -21,7 +21,7 @@ class OpenAIBackend(ChatBackend):
         self._api_key = api_key
 
         base = (config.api_base or "https://api.openai.com").rstrip("/")
-        self._endpoint = f"{base}/chat/completions"
+        self._endpoint = f"{base}"
 
         self._client = httpx.AsyncClient(
             timeout=60.0,

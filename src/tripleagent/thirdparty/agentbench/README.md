@@ -12,3 +12,4 @@ Only minimal file pruning was performed. All local modifications (if any) are do
 - Refactor `eval.py` to run in TripleAgent pipeline.
 - Rewrite relative imports in AgentBench directory.
 - Rewrite `create_assignment.py` to point to vendored package path.
+- Replace OpenAI client with latest version in `openai_agents.py`

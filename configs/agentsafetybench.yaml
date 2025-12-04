@@ -2,7 +2,7 @@ output_dir: outputs/runs/agentsafetybench
 
 model:
   provider: openai
-  name: gpt-4o-mini
+  name: gpt-4o
   api_base: https://api.openai.com/v1/chat/completions
   api_key_env: OPENAI_API_KEY
   extra:
@@ -10,15 +10,24 @@ model:
     temperature: 0.0
 
 judge_model:
-  provider: huggingface
-  name: "thu-coai/ShieldAgent"    # Taken from the paper
-  max_new_tokens: 256
-  temperature: 0.0
-  api_base: "https://api-inference.huggingface.co/models"
-  api_key_env: "HF_API_TOKEN"
+  provider: openai
+  name: gpt-4o
+  api_base: https://api.openai.com/v1/chat/completions
+  api_key_env: OPENAI_API_KEY
   extra:
-    max_new_tokens: 256
+    max_new_tokens: 512
     temperature: 0.0
+
+# judge_model:
+#   provider: huggingface
+#   name: "thu-coai/ShieldAgent"    # Taken from the paper
+#   max_new_tokens: 256
+#   temperature: 0.0
+#   api_base: "https://api-inference.huggingface.co/models"
+#   api_key_env: "HF_API_TOKEN"
+#   extra:
+#     max_new_tokens: 256
+#     temperature: 0.0
 
 benchmarks:
   agentsafetybench:
@@ -32,7 +41,7 @@ benchmarks:
 
     # agent config
     max_iterations: 3
-    tool_choice: auto
+    tool_choice: local
     max_new_tokens: 512
 
   agentharm:

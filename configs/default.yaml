@@ -4,39 +4,39 @@ model:
   name: gpt-4o
   max_new_tokens: 512
   temperature: 0.0
-  api_base: https://api.openai.com/v1
+  api_base: https://api.openai.com/v1/chat/completions
   api_key_env: OPENAI_API_KEY
   extra:
     response_format: "json"
 
 judge_model:
   provider: openai
-  name: gpt-4o-mini
+  name: gpt-4o
   max_new_tokens: 512
   temperature: 0.0
-  api_base: https://api.openai.com/v1
+  api_base: https://api.openai.com/v1/chat/completions
   api_key_env: OPENAI_API_KEY
   extra:
     response_format: "json"
 
 benchmarks:
   agentbench:
-    enabled: True
+    enabled: False
     task_config: "configs/tasks/knowledgegraph/dev_small.yaml"      # Knowledge Graph
     agent_config: "configs/agents/api_agents/gpt-4.yaml"
-    limit: 5
+    limit: 2
 
   agentsafetybench:
     enabled: False
     source: "local"
     hf_name: "thu-coai/Agent-SafetyBench"
     split: "train"
-    limit: 5
+    limit: 2
     tool_choice: "auto"
     max_iterations: 2
 
   agentharm:
-    enabled: False
+    enabled: True
     task_name: harmful
     split: test_public
     system_prompt_template: default      # or "llama-3.1"
@@ -45,7 +45,7 @@ benchmarks:
     detailed_behaviors: null
     hint_included: null
     n_irrelevant_tools: 0
-    limit: 5
+    limit: 2
     max_iterations: 3
     tool_choice: auto
     max_new_tokens: 512

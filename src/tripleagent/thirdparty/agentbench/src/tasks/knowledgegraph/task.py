@@ -213,7 +213,7 @@ class KnowledgeGraph(Task):
             message = message.replace("\\_", "_")
             session.history[-1]["content"] = message
             # print({"role": "agent", "content": message})
-
+            print("Message:", message)
             final_answer = re.findall(r'(?:Find|Final) Answer: #(\d+)', message)
             if final_answer:
                 try:
@@ -223,6 +223,7 @@ class KnowledgeGraph(Task):
                     # print({"role": "user", "content": "Invalid variable id! Need to recheck the action."})
                     continue
                 answer = final_execute(answer_variable, self.sparql_executor)
+                print("Raw agent output:", answer)
                 break
             else:
                 lines = message.split("\n")
@@ -260,15 +261,12 @@ class KnowledgeGraph(Task):
                                 function_executed = True
                                 break # at most one function is executed in one turn
                             except Exception as e:
-                                # if function_name not in ["intersection", "union"]:
-                                try:
-                                    if function_name != "intersection":
-                                        execution_message = f"{function_name}({', '.join(ori_arguments)}) cannot be executed. You may make a mistake and need to fix it."
-                                    else:
-                                        execution_message = f"{function_name}({', '.join(ori_arguments)}) cannot be executed. The two variables are not of the same type. You may further explore them by call get_relations"
-                                except UnboundLocalError:
-                                    execution_message = f"I may make a syntax error when calling {function_name} (e.g., unmatched parenthesis). I need to fix it and reuse the tool"
-                                
+                                # Safely build a string for the original arguments if available
+                                args_display = ', '.join(locals().get('ori_arguments', []))
+                                if function_name != "intersection":
+                                    execution_message = f"{function_name}({args_display}) cannot be executed. You may make a mistake and need to fix it."
+                                else:
+                                    execution_message = f"{function_name}({args_display}) cannot be executed. The two variables are not of the same type. You may further explore them by call get_relations"
                                 continue
                         
                         if not function_executed:

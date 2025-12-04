@@ -39,6 +39,16 @@ async def main(exp_path: str) -> None:
     benchmarks_cfg = exp_cfg.get("benchmarks", {})
     summaries: dict[str, dict] = {}
 
+    # ---- AgentBench ----
+    if benchmarks_cfg.get("agentbench", {}).get("enabled", False):
+        print("[run_experiment] Running AgentBench…", flush=True)
+        summaries["agentbench"] = await experiment_agentbench(
+            cfg=benchmarks_cfg["agentbench"],
+            run_dir=run_dir,
+            # model=model,
+        )
+        print("[run_experiment] AgentBench done.", flush=True)
+        
     # ---- Agent-SafetyBench ----
     if benchmarks_cfg.get("agentsafetybench", {}).get("enabled", False):
         print("[run_experiment] Running Agent-SafetyBench…", flush=True)
@@ -60,16 +70,6 @@ async def main(exp_path: str) -> None:
             run_dir=run_dir,
         )
         print("[run_experiment] AgentHarm done.", flush=True)
-
-    # ---- AgentBench ----
-    if benchmarks_cfg.get("agentbench", {}).get("enabled", False):
-        print("[run_experiment] Running AgentBench…", flush=True)
-        summaries["agentbench"] = await experiment_agentbench(
-            cfg=benchmarks_cfg["agentbench"],
-            run_dir=run_dir,
-            model=model,
-        )
-        print("[run_experiment] AgentBench done.", flush=True)
 
     combined_path = run_dir / "combined_summary.json"
     combined_path.write_text(
