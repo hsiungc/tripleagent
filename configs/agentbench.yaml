@@ -1,0 +1,37 @@
+output_dir: outputs/runs/agentbench
+
+model:
+  provider: openai
+  name: gpt-4o
+  # api_base: https://api.openai.com/v1/chat/completions
+  api_key_env: OPENAI_API_KEY
+  extra:
+    max_new_tokens: 512
+    temperature: 0.0
+
+
+# Judge model isn't used by AgentBench, but TripleAgent
+# still expects a judge_model section
+judge_model:
+  provider: openai
+  name: gpt-4o
+  # api_base: https://api.openai.com/v1/chat/completions
+  api_key_env: OPENAI_API_KEY
+  extra:
+    max_new_tokens: 512
+    temperature: 0.0
+
+benchmarks:
+  agentsafetybench:
+    enabled: false
+
+  agentharm:
+    enabled: false
+
+  agentbench:
+    enabled: true
+    # Path to AgentBench repo (KnowledgeGraph dev task based on sample size)
+    task_config: "configs/tasks/knowledgegraph/dev_small.yaml"      # Knowledge Graph
+    agent_config: "configs/agents/api_agents/gpt-4.yaml"
+    workers: 4
+    limit: 5

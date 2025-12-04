@@ -1,0 +1,58 @@
+output_dir: outputs/runs/agentharm
+
+model:
+  provider: openai
+  name: gpt-4o-mini
+  api_base: https://api.openai.com/v1/chat/completions
+  api_key_env: OPENAI_API_KEY
+  max_new_tokens: 512
+  temperature: 0.0
+  extra: {}
+
+judge_model:
+  provider: openai
+  name: gpt-4o-mini
+  api_base: https://api.openai.com/v1/chat/completions
+  api_key_env: OPENAI_API_KEY
+  max_new_tokens: 512
+  temperature: 0.0
+  extra: {}
+
+# Support separate judge models:
+# refusal_judge_model:
+#   provider: openai
+#   name: gpt-4o-2024-08-06
+
+# semantic_judge_model:
+#   provider: openai
+#   name: gpt-4o-2024-08-06
+
+benchmarks:
+  agentsafetybench:
+    enabled: false
+
+  agentharm:
+    enabled: true
+
+    task_name: harmful          # "harmful" | "benign" | "chat"
+    source: hf
+    hf_name: ai-safety-institute/AgentHarm
+    split: test_public
+    limit: 5                     # Small subset for testing
+
+    # filtering knobs
+    behavior_ids: []
+    detailed_behaviors: null    # true/false/null
+    hint_included: null         # true/false/null
+
+    # agent config
+    system_prompt_template: default
+    prompt_technique: standard
+    max_iterations: 3
+    tool_choice: auto
+    max_new_tokens: 512
+
+
+
+  agentbench:
+    enabled: false
